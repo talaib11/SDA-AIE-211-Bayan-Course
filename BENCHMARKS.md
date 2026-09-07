@@ -15,6 +15,18 @@
 
 ## Lab 2 — Attention
 
+| Check | Result |
+|---|---|
+| Scaled dot-product attention vs PyTorch | Passed (`atol=1e-6`) |
+| Attention tests | 2 / 2 passed |
+| Multi-head input shape | `[2, 5, 64]` |
+| Multi-head output shape | `[2, 5, 64]` |
+| Multi-head configuration | 4 heads, 16 dimensions per head |
+| Multi-head parameters | 16,640 |
+| Causal mask | Lower-triangular mask verified |
+| Causal output shape | `[1, 1, 4, 8]` |
+| Pad-attention leakage | Output changed after padding mask (`True`) |
+
 ## Lab 3A — Classification
 
 ## Lab 3B — NER + QA
