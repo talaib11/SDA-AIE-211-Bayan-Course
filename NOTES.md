@@ -54,7 +54,16 @@ For each one record: example, why it matters, and clean/preserve/task-dependent.
 |---|---:|---:|---|
 | mBERT | 177,853,440 | 51.84% | Larger embedding parameter count; attention and FFN counts are the same as CAMeLBERT. |
 | CAMeLBERT | 109,081,344 | 21.49% | Smaller embedding parameter count; attention and FFN counts are the same as mBERT. |
+### Lab 2 — Attention diagnostics
 
+- mBERT has a larger embedding share than CAMeLBERT because its multilingual vocabulary requires a larger embedding table (multilingual vocabulary tax).
+- The causal attention matrix was verified to be lower-triangular.
+- Future-attention mass: 0.0.
+- This demonstrates decoder-style causal attention: each position can attend only to itself and previous positions.
+- Average [SEP] attention in the diagnostic example: 0.25995659828186035.
+- Pad-attention mass without a padding mask: 0.3397676348686218 (~33.98%).
+- Pad-attention mass with a padding mask: 0.0 (0%).
+- The padding mask successfully eliminated attention leakage to [PAD] tokens.
 ## Lab 4 — Dialect audit
 
 - Distribution:

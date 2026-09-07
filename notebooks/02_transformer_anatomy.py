@@ -1,9 +1,26 @@
-"""Lab 2: Transformer anatomy experiments."""
+"""Lab 2: Transformer anatomy experiments and diagnostics."""
 
+import math
 import torch
 import torch.nn.functional as F
 
 from bayan.attention import attention, MultiHeadAttention
+
+
+def attention_with_weights(q, k, v, mask=None):
+    """Diagnostic version: returns both context and attention weights."""
+    scores = q @ k.transpose(-2, -1)
+
+    d_k = q.size(-1)
+    scores = scores / math.sqrt(d_k)
+
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, -1e9)
+
+    weights = torch.softmax(scores, dim=-1)
+    context = weights @ v
+
+    return context, weights
 
 
 def main():
@@ -37,9 +54,6 @@ def main():
     print("Input shape :", x.shape)
     print("Output shape:", output.shape)
 
-    # ---------------------------------
-    # 3. Parameter accounting
-    # ---------------------------------
     total_params = sum(
         p.numel() for p in mha.parameters()
     )
@@ -48,30 +62,49 @@ def main():
     print("Total parameters:", total_params)
 
     # ---------------------------------
-    # 4. Causal masking
+    # 3. Causal attention diagnostics
     # ---------------------------------
     seq_len = 4
-
-    causal_mask = torch.tril(
-        torch.ones(seq_len, seq_len)
-    )
-
-    print("\nCausal mask:")
-    print(causal_mask)
 
     q = torch.randn(1, 1, seq_len, 8)
     k = torch.randn(1, 1, seq_len, 8)
     v = torch.randn(1, 1, seq_len, 8)
 
-    causal_output = attention(
+    causal_mask = torch.tril(
+        torch.ones(seq_len, seq_len)
+    )
+
+    causal_context, causal_weights = attention_with_weights(
         q, k, v, mask=causal_mask
     )
 
-    print("Causal attention output shape:")
-    print(causal_output.shape)
+    print("\nCausal mask:")
+    print(causal_mask)
+
+    print("\nCausal attention weight matrix:")
+    print(causal_weights[0, 0])
+
+    upper_triangle_mass = torch.triu(
+        causal_weights[0, 0],
+        diagonal=1
+    ).sum().item()
+
+    print(
+        "Future-attention mass:",
+        upper_triangle_mass
+    )
+
+    print(
+        "Lower-triangular verified:",
+        upper_triangle_mass < 1e-6
+    )
+
+    print(
+        "Model family: Decoder-style causal attention"
+    )
 
     # ---------------------------------
-    # 5. Pad-attention leakage
+    # 4. Pad-attention leakage
     # ---------------------------------
     seq_len = 5
 
@@ -79,31 +112,74 @@ def main():
     k = torch.randn(1, 1, seq_len, 8)
     v = torch.randn(1, 1, seq_len, 8)
 
-    # Last two positions are padding
-    pad_mask = torch.tensor([
-        [1, 1, 1, 0, 0]
-    ])
+    # Example:
+    # token, token, [SEP], [PAD], [PAD]
+    pad_mask = torch.tensor(
+        [[1, 1, 1, 0, 0]]
+    )[:, None, None, :]
 
-    # Reshape mask for attention scores
-    pad_mask = pad_mask[:, None, None, :]
+    _, weights_without_mask = attention_with_weights(
+        q, k, v
+    )
 
-    # Attention without masking padding
-    output_without_mask = attention(q, k, v)
-
-    # Attention with padding masked
-    output_with_mask = attention(
+    _, weights_with_mask = attention_with_weights(
         q, k, v, mask=pad_mask
     )
 
-    print("\nPad-attention leakage:")
-    print("Pad mask:", pad_mask)
-    print(
-        "Outputs differ after masking:",
-        not torch.allclose(
-            output_without_mask,
-            output_with_mask
-        )
+    pad_mass_without_mask = (
+        weights_without_mask[..., 3:]
+        .sum(dim=-1)
+        .mean()
+        .item()
     )
+
+    pad_mass_with_mask = (
+        weights_with_mask[..., 3:]
+        .sum(dim=-1)
+        .mean()
+        .item()
+    )
+
+    sep_mass_without_mask = (
+        weights_without_mask[..., 2]
+        .mean()
+        .item()
+    )
+
+    print("\nAttention-map diagnostics:")
+    print(
+        "Example layout: token token [SEP] [PAD] [PAD]"
+    )
+
+    print(
+        "Average [SEP] attention:",
+        sep_mass_without_mask
+    )
+
+    print(
+        "Pad mass WITHOUT mask:",
+        pad_mass_without_mask
+    )
+
+    print(
+        "Pad mass WITH mask:",
+        pad_mass_with_mask
+    )
+
+    print(
+        "Pad leakage fixed:",
+        pad_mass_with_mask < 1e-6
+    )
+
+    print(
+        "\nExample attention matrix without pad mask:"
+    )
+    print(weights_without_mask[0, 0])
+
+    print(
+        "\nExample attention matrix with pad mask:"
+    )
+    print(weights_with_mask[0, 0])
 
 
 if __name__ == "__main__":

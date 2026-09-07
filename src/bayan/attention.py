@@ -45,13 +45,22 @@ class MultiHeadAttention(nn.Module):
         v = self.v_proj(x)
 
         q = q.view(
-            batch_size, seq_len, self.num_heads, self.head_dim
+            batch_size,
+            seq_len,
+            self.num_heads,
+            self.head_dim,
         )
         k = k.view(
-            batch_size, seq_len, self.num_heads, self.head_dim
+            batch_size,
+            seq_len,
+            self.num_heads,
+            self.head_dim,
         )
         v = v.view(
-            batch_size, seq_len, self.num_heads, self.head_dim
+            batch_size,
+            seq_len,
+            self.num_heads,
+            self.head_dim,
         )
 
         q = q.transpose(1, 2)
@@ -63,7 +72,9 @@ class MultiHeadAttention(nn.Module):
         context = context.transpose(1, 2).contiguous()
 
         context = context.view(
-            batch_size, seq_len, self.embed_dim
+            batch_size,
+            seq_len,
+            self.embed_dim,
         )
 
         output = self.out_proj(context)

@@ -23,10 +23,13 @@
 | Multi-head output shape | `[2, 5, 64]` |
 | Multi-head configuration | 4 heads, 16 dimensions per head |
 | Multi-head parameters | 16,640 |
-| Causal mask | Lower-triangular mask verified |
-| Causal output shape | `[1, 1, 4, 8]` |
-| Pad-attention leakage | Output changed after padding mask (`True`) |
-
+| Causal attention | Lower-triangular verified (`True`) |
+| Future-attention mass | 0.0 |
+| Attention family | Decoder-style causal attention |
+| Average `[SEP]` attention | 0.25995659828186035 |
+| `[PAD]` mass without mask | 0.3397676348686218 (~33.98%) |
+| `[PAD]` mass with mask | 0.0 (0%) |
+| Pad-attention leakage fix | Verified (`True`) |
 ## Lab 3A — Classification
 
 ## Lab 3B — NER + QA
