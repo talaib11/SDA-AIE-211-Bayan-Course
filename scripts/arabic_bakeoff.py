@@ -1,4 +1,4 @@
-"""Lab 4: compare Arabic-centric checkpoints on all/Gulf/MSA slices."""
+"""Lab 4: compare Arabic-centric checkpoints by All/Gulf/MSA slices."""
 
 import argparse
 
@@ -49,12 +49,16 @@ def macro_f1(y_true, y_pred):
 def main():
     args = parse_args()
 
+    # ---------------------------------------------------------
+    # Load Arabic data
+    # ---------------------------------------------------------
+
     df = pd.read_csv(DATA_PATH)
 
-    # Arabic slice only.
-    arabic_df = df[df["lang"] == "ar"].copy()
+    arabic_df = df[
+        df["lang"] == "ar"
+    ].copy()
 
-    # The supplied Arabic data contains train + validation.
     train_df = arabic_df[
         arabic_df["split"] == "train"
     ].copy()
@@ -68,11 +72,33 @@ def main():
     print("Validation rows:", len(eval_df))
 
     print(
-        "Validation dialects:",
-        eval_df["dialect_region"].value_counts().to_dict(),
+        "Arabic dialect distribution:",
+        arabic_df["dialect_region"]
+        .value_counts()
+        .to_dict(),
     )
 
-    # Topic labels.
+    print(
+        "Validation dialect distribution:",
+        eval_df["dialect_region"]
+        .value_counts()
+        .to_dict(),
+    )
+
+    if len(train_df) == 0:
+        raise ValueError(
+            "No Arabic training examples were found."
+        )
+
+    if len(eval_df) == 0:
+        raise ValueError(
+            "No Arabic validation examples were found."
+        )
+
+    # ---------------------------------------------------------
+    # Labels
+    # ---------------------------------------------------------
+
     labels = sorted(
         train_df["topic"].unique()
     )
@@ -87,13 +113,78 @@ def main():
         for label, idx in label2id.items()
     }
 
-    train_df["labels"] = train_df[
-        "topic"
-    ].map(label2id)
+    train_df["labels"] = (
+        train_df["topic"].map(label2id)
+    )
 
-    eval_df["labels"] = eval_df[
-        "topic"
-    ].map(label2id)
+    eval_df["labels"] = (
+        eval_df["topic"].map(label2id)
+    )
+
+    print(
+        "Number of topic labels:",
+        len(labels),
+    )
+
+    print(
+        "Topics:",
+        labels,
+    )
+
+    # ---------------------------------------------------------
+    # Prepare dialect slice indices
+    # ---------------------------------------------------------
+
+    dialect_regions = (
+        eval_df["dialect_region"]
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+
+    gulf_indices = np.array(
+        [
+            i
+            for i, region in enumerate(dialect_regions)
+            if region.lower() == "gulf"
+        ],
+        dtype=int,
+    )
+
+    msa_indices = np.array(
+        [
+            i
+            for i, region in enumerate(dialect_regions)
+            if region.lower() == "msa"
+        ],
+        dtype=int,
+    )
+
+    print(
+        "Validation Gulf examples:",
+        len(gulf_indices),
+    )
+
+    print(
+        "Validation MSA examples:",
+        len(msa_indices),
+    )
+
+    if len(gulf_indices) == 0:
+        raise ValueError(
+            "No Gulf examples found in the validation split. "
+            "Cannot compute Gulf macro-F1."
+        )
+
+    if len(msa_indices) == 0:
+        raise ValueError(
+            "No MSA examples found in the validation split. "
+            "Cannot compute MSA macro-F1."
+        )
+
+    # ---------------------------------------------------------
+    # Model bake-off
+    # ---------------------------------------------------------
 
     results = []
 
@@ -126,10 +217,12 @@ def main():
                     max_length=128,
                 )
 
-            return dataset.map(
+            dataset = dataset.map(
                 tokenize,
                 batched=True,
             )
+
+            return dataset
 
         train_ds = make_dataset(
             train_df
@@ -200,6 +293,10 @@ def main():
 
         trainer.train()
 
+        # -----------------------------------------------------
+        # Frozen validation predictions
+        # -----------------------------------------------------
+
         prediction_output = trainer.predict(
             eval_ds
         )
@@ -209,52 +306,64 @@ def main():
             axis=-1,
         )
 
-        gold = prediction_output.label_ids
+        gold = np.asarray(
+            prediction_output.label_ids,
+            dtype=int,
+        )
 
-        # All Arabic validation slice.
+        predictions = np.asarray(
+            predictions,
+            dtype=int,
+        )
+
+        # -----------------------------------------------------
+        # All Arabic
+        # -----------------------------------------------------
+
         all_f1 = macro_f1(
             gold,
             predictions,
         )
 
-        dialect_regions = (
-            eval_df["dialect_region"]
-            .tolist()
-        )
+        # -----------------------------------------------------
+        # Gulf slice
+        # -----------------------------------------------------
 
-        gulf_indices = np.array(
-            [
-                i
-                for i, region
-                in enumerate(dialect_regions)
-                if region == "Gulf"
-            ]
-        )
+        gulf_gold = gold[
+            gulf_indices
+        ]
 
-        msa_indices = np.array(
-            [
-                i
-                for i, region
-                in enumerate(dialect_regions)
-                if region == "MSA"
-            ]
-        )
+        gulf_predictions = predictions[
+            gulf_indices
+        ]
 
         gulf_f1 = macro_f1(
-            gold[gulf_indices],
-            predictions[gulf_indices],
+            gulf_gold,
+            gulf_predictions,
         )
 
+        # -----------------------------------------------------
+        # MSA slice
+        # -----------------------------------------------------
+
+        msa_gold = gold[
+            msa_indices
+        ]
+
+        msa_predictions = predictions[
+            msa_indices
+        ]
+
         msa_f1 = macro_f1(
-            gold[msa_indices],
-            predictions[msa_indices],
+            msa_gold,
+            msa_predictions,
         )
 
         row = {
             "model": model_name,
-            "all_macro_f1": all_f1,
-            "gulf_macro_f1": gulf_f1,
-            "msa_macro_f1": msa_f1,
+            "all_macro_f1": float(all_f1),
+            "gulf_macro_f1": float(gulf_f1),
+            "msa_macro_f1": float(msa_f1),
         }
 
         results.append(row)
@@ -262,16 +371,22 @@ def main():
         print()
         print(
             "All Arabic macro-F1:",
-            round(all_f1, 4),
+            f"{all_f1:.4f}",
         )
+
         print(
             "Gulf macro-F1:",
-            round(gulf_f1, 4),
+            f"{gulf_f1:.4f}",
         )
+
         print(
             "MSA macro-F1:",
-            round(msa_f1, 4),
+            f"{msa_f1:.4f}",
         )
+
+    # ---------------------------------------------------------
+    # Final comparison
+    # ---------------------------------------------------------
 
     print()
     print("=" * 70)
@@ -286,19 +401,24 @@ def main():
             f'MSA={row["msa_macro_f1"]:.4f}'
         )
 
-    # Day-2 baseline for Lab 4 target.
+    # ---------------------------------------------------------
+    # Day-2 baseline
+    # ---------------------------------------------------------
+
     baseline = next(
         row
         for row in results
         if row["model"] == "Day-2 XLM-R"
     )
 
+    # Only Arabic-centric models are candidates for Lab 4 winner.
     arabic_models = [
         row
         for row in results
         if row["model"] != "Day-2 XLM-R"
     ]
 
+    # Course contract: choose using Gulf slice evidence.
     winner = max(
         arabic_models,
         key=lambda row: row["gulf_macro_f1"],
@@ -310,6 +430,8 @@ def main():
     )
 
     print()
+    print("-" * 70)
+
     print(
         "Winner by Gulf slice:",
         winner["model"],
@@ -338,6 +460,8 @@ def main():
         print(
             "Lab 4 Gulf target: NOT MET"
         )
+
+    print("-" * 70)
 
 
 if __name__ == "__main__":
