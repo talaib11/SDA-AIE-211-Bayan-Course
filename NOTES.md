@@ -64,7 +64,10 @@ For each one record: example, why it matters, and clean/preserve/task-dependent.
 - Pad-attention mass without a padding mask: 0.3397676348686218 (~33.98%).
 - Pad-attention mass with a padding mask: 0.0 (0%).
 - The padding mask successfully eliminated attention leakage to [PAD] tokens.
-## Lab 4 — Dialect audit
+## Lab 4 — Dialect Audit
 
-- Distribution:
-- One-sentence implication for MSA-only evaluation:
+- Arabic slice: 7,200 examples
+- Gulf: 4,800 (66.7%)
+- MSA: 2,400 (33.3%)
+
+Evaluating only on MSA would not represent the full Arabic data distribution, since the majority of the Arabic slice (66.7%) is Gulf dialect.
