@@ -262,12 +262,12 @@ def main():
         report_to="none",
     )
 
+    # Compatible with the newer Transformers Trainer API.
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized["train"],
         eval_dataset=tokenized["validation"],
-        tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
