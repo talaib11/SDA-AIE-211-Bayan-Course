@@ -48,4 +48,4 @@ def segment(text: str) -> list[str]:
         split=True,
     )
 
-    return tokenizer.tokenize([text])[0]
+    return tokenizer.tokenize(text.split())
