@@ -63,6 +63,19 @@
 
 - The original Day-2 NER already achieved 100% LOCATION recall on this split, so segmentation could not improve recall further.
 
+### Arabic model bake-off
+
+| Model | All macro-F1 | Gulf macro-F1 | MSA macro-F1 |
+|---|---:|---:|---:|
+| Day-2 XLM-R | 1.0000 | 1.0000 | 1.0000 |
+| CAMeLBERT-mix | 1.0000 | 1.0000 | 1.0000 |
+| CAMeLBERT-DA | 1.0000 | 1.0000 | 1.0000 |
+
+- Bake-off evaluation split: 1,200 held-out Arabic examples (960 Gulf, 240 MSA), created deterministically from the supplied Arabic training data with joint dialect/topic stratification because the supplied validation split contains no Gulf examples.
+- Winner by Gulf slice: CAMeLBERT-mix (tie with CAMeLBERT-DA).
+- Best Gulf macro-F1 delta vs Day-2 XLM-R: +0.0000.
+- Lab 4 Gulf target (+0.04 macro-F1 over Day-2): NOT MET.
+- Decision: retain Day-2 XLM-R because the Arabic-centric candidates showed no measured Gulf improvement.
 ## Lab 5 — Semantic search
 
 ## Lab 6 — Evaluation / model cards

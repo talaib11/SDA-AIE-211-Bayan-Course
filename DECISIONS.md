@@ -14,15 +14,15 @@
 
 ## arabic-model
 
-- Incumbent:
+- Incumbent: xlm-roberta-base (Day-2 XLM-R)
 
-- Candidate:
+- Candidate: CAMeL-Lab/bert-base-arabic-camelbert-mix and CAMeL-Lab/bert-base-arabic-camelbert-da
 
-- All/Gulf/MSA evidence:
+- All/Gulf/MSA evidence: On the deterministic Arabic bake-off evaluation split (1,200 examples: 960 Gulf and 240 MSA), Day-2 XLM-R, CAMeLBERT-mix, and CAMeLBERT-DA all achieved 1.0000 macro-F1 on All, Gulf, and MSA slices.
 
-- CI-backed verdict:
+- CI-backed verdict: Retain xlm-roberta-base as the incumbent. The best Arabic-centric candidate did not improve Gulf macro-F1 over Day-2 XLM-R (delta = +0.0000), so the Lab 4 target of at least +0.04 Gulf macro-F1 was NOT MET. CAMeLBERT-mix and CAMeLBERT-DA tied on the measured slices, so there is no measured quality justification for replacing the incumbent.
 
-- Segmentation contract:
+- Segmentation contract: Arabic clitic segmentation remains a separate preprocessing/NER experiment and is not used to claim an Arabic model quality improvement in this bake-off.
 
 ## search-min-score
 
