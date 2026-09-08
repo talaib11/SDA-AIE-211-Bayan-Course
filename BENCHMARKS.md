@@ -43,7 +43,12 @@
 - Seed: 42
 - Classifier artifact: `artifacts/topic_classifier`
 ## Lab 3B — NER + QA
+| QA smoke-set file | 12 answerable / 0 unanswerable |
+| README QA target | 9 answerable / 3 unanswerable |
+| QA smoke-set status | Dataset/README mismatch detected |
 
+- `best_span()` supports honest null/no-answer handling.
+- The supplied `qa_smoke_set.json` does not contain the 3 unanswerable cases stated in the Lab 3B README.
 ## Lab 4 — Arabic normalization / dialect
 
 ## Lab 5 — Semantic search
