@@ -78,6 +78,28 @@
 - Decision: retain Day-2 XLM-R because the Arabic-centric candidates showed no measured Gulf improvement.
 ## Lab 5 — Semantic search
 
+| Metric | Measured result | Target |
+|---|---:|---:|
+| Recall@10 without reranking | 0.0103 | ≥ 0.80 |
+| MRR@10 without reranking | 0.0056 | ≥ 0.70 |
+| Recall@10 with reranking | 0.0026 | ≥ 0.80 |
+| MRR@10 with reranking | 0.0015 | ≥ 0.70 |
+| Arabic reranked Recall@10 | 0.0056 | — |
+| Arabic reranked MRR@10 | 0.0033 | — |
+| English reranked Recall@10 | 0.0000 | — |
+| English reranked MRR@10 | 0.0000 | — |
+| Cross-lingual MRR gap | 0.0033 | — |
+| No-answer correctness | 20 / 20 | ≥ 17 / 20 |
+| Bi-encoder mean latency | 18.78 ms/query | — |
+| Two-stage mean latency | 58.15 ms/query | — |
+
+- Evaluated queries: 150 total (130 answerable, 20 no-answer).
+- Tuned `min_score`: `-2.092221`.
+- No-answer target passed: 20 / 20.
+- Retrieval quality targets were not met with the evaluated multilingual bi-encoder / cross-encoder configuration.
+- Diagnosis: L2 normalisation and FAISS indexing were verified. All 390 judged relevant case IDs were present in the 20k corpus. A diagnostic topic-filtered retrieval run still produced Recall@10 = 0.0051 and MRR@10 = 0.0038. The corpus contains highly similar and duplicate synthetic cases that are not included in each query's judged `relevant_case_ids`, so plausible-looking nearest neighbours do not necessarily match the labelled relevance set.
+- Planted-bug lesson: retrieval quality must be approved using the labelled query set and measured metrics rather than by visually inspecting plausible results.
+
 ## Lab 6 — Evaluation / model cards
 
 ## Lab 7 — ONNX / INT8 + FastAPI
