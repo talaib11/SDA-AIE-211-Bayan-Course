@@ -18,6 +18,7 @@ from transformers import (
 DATA_PATH = "data/raw/bayan_feedback.csv"
 
 MODELS = {
+    "Day-2 XLM-R": "xlm-roberta-base",
     "CAMeLBERT-mix": "CAMeL-Lab/bert-base-arabic-camelbert-mix",
     "CAMeLBERT-DA": "CAMeL-Lab/bert-base-arabic-camelbert-da",
 }
@@ -30,6 +31,7 @@ def parse_args():
         "--epochs",
         type=int,
         default=3,
+        help="Number of fine-tuning epochs.",
     )
 
     return parser.parse_args()
@@ -40,6 +42,7 @@ def macro_f1(y_true, y_pred):
         y_true,
         y_pred,
         average="macro",
+        zero_division=0,
     )
 
 
@@ -49,14 +52,30 @@ def main():
     df = pd.read_csv(DATA_PATH)
 
     # Arabic slice only.
-    df = df[df["lang"] == "ar"].copy()
+    arabic_df = df[df["lang"] == "ar"].copy()
 
-    # Use the supplied frozen splits.
-    train_df = df[df["split"] == "train"].copy()
-    valid_df = df[df["split"] == "validation"].copy()
-    test_df = df[df["split"] == "test"].copy()
+    # The supplied Arabic data contains train + validation.
+    train_df = arabic_df[
+        arabic_df["split"] == "train"
+    ].copy()
 
-    labels = sorted(train_df["topic"].unique())
+    eval_df = arabic_df[
+        arabic_df["split"] == "validation"
+    ].copy()
+
+    print("Arabic rows:", len(arabic_df))
+    print("Train rows:", len(train_df))
+    print("Validation rows:", len(eval_df))
+
+    print(
+        "Validation dialects:",
+        eval_df["dialect_region"].value_counts().to_dict(),
+    )
+
+    # Topic labels.
+    labels = sorted(
+        train_df["topic"].unique()
+    )
 
     label2id = {
         label: idx
@@ -68,30 +87,33 @@ def main():
         for label, idx in label2id.items()
     }
 
-    for frame in (train_df, valid_df, test_df):
-        frame["labels"] = frame["topic"].map(label2id)
+    train_df["labels"] = train_df[
+        "topic"
+    ].map(label2id)
+
+    eval_df["labels"] = eval_df[
+        "topic"
+    ].map(label2id)
 
     results = []
 
     for model_name, checkpoint in MODELS.items():
         print()
-        print("=" * 60)
+        print("=" * 70)
         print("Model:", model_name)
         print("Checkpoint:", checkpoint)
-        print("=" * 60)
+        print("=" * 70)
 
         tokenizer = AutoTokenizer.from_pretrained(
-            checkpoint,
-            use_fast=True,
+            checkpoint
         )
 
-        def to_dataset(frame):
-            ds = Dataset.from_pandas(
+        def make_dataset(frame):
+            dataset = Dataset.from_pandas(
                 frame[
                     [
                         "text",
                         "labels",
-                        "dialect_region",
                     ]
                 ],
                 preserve_index=False,
@@ -104,20 +126,27 @@ def main():
                     max_length=128,
                 )
 
-            return ds.map(
+            return dataset.map(
                 tokenize,
                 batched=True,
             )
 
-        train_ds = to_dataset(train_df)
-        valid_ds = to_dataset(valid_df)
-        test_ds = to_dataset(test_df)
+        train_ds = make_dataset(
+            train_df
+        )
 
-        model = AutoModelForSequenceClassification.from_pretrained(
-            checkpoint,
-            num_labels=len(labels),
-            label2id=label2id,
-            id2label=id2label,
+        eval_ds = make_dataset(
+            eval_df
+        )
+
+        model = (
+            AutoModelForSequenceClassification
+            .from_pretrained(
+                checkpoint,
+                num_labels=len(labels),
+                label2id=label2id,
+                id2label=id2label,
+            )
         )
 
         data_collator = DataCollatorWithPadding(
@@ -125,7 +154,7 @@ def main():
         )
 
         def compute_metrics(eval_pred):
-            logits, labels_array = eval_pred
+            logits, gold = eval_pred
 
             predictions = np.argmax(
                 logits,
@@ -134,13 +163,22 @@ def main():
 
             return {
                 "macro_f1": macro_f1(
-                    labels_array,
+                    gold,
                     predictions,
                 )
             }
 
+        safe_name = (
+            model_name
+            .replace(" ", "_")
+            .replace("/", "_")
+        )
+
         training_args = TrainingArguments(
-            output_dir=f"/content/artifacts/{model_name}",
+            output_dir=(
+                f"/content/artifacts/"
+                f"arabic_bakeoff_{safe_name}"
+            ),
             learning_rate=2e-5,
             per_device_train_batch_size=16,
             per_device_eval_batch_size=32,
@@ -155,14 +193,16 @@ def main():
             model=model,
             args=training_args,
             train_dataset=train_ds,
-            eval_dataset=valid_ds,
+            eval_dataset=eval_ds,
             data_collator=data_collator,
             compute_metrics=compute_metrics,
         )
 
         trainer.train()
 
-        prediction_output = trainer.predict(test_ds)
+        prediction_output = trainer.predict(
+            eval_ds
+        )
 
         predictions = np.argmax(
             prediction_output.predictions,
@@ -171,25 +211,34 @@ def main():
 
         gold = prediction_output.label_ids
 
-        # All Arabic.
+        # All Arabic validation slice.
         all_f1 = macro_f1(
             gold,
             predictions,
         )
 
-        dialects = test_df["dialect_region"].tolist()
+        dialect_regions = (
+            eval_df["dialect_region"]
+            .tolist()
+        )
 
-        gulf_indices = [
-            i
-            for i, region in enumerate(dialects)
-            if region == "Gulf"
-        ]
+        gulf_indices = np.array(
+            [
+                i
+                for i, region
+                in enumerate(dialect_regions)
+                if region == "Gulf"
+            ]
+        )
 
-        msa_indices = [
-            i
-            for i, region in enumerate(dialects)
-            if region == "MSA"
-        ]
+        msa_indices = np.array(
+            [
+                i
+                for i, region
+                in enumerate(dialect_regions)
+                if region == "MSA"
+            ]
+        )
 
         gulf_f1 = macro_f1(
             gold[gulf_indices],
@@ -201,24 +250,33 @@ def main():
             predictions[msa_indices],
         )
 
-        results.append(
-            {
-                "model": model_name,
-                "all_macro_f1": all_f1,
-                "gulf_macro_f1": gulf_f1,
-                "msa_macro_f1": msa_f1,
-            }
-        )
+        row = {
+            "model": model_name,
+            "all_macro_f1": all_f1,
+            "gulf_macro_f1": gulf_f1,
+            "msa_macro_f1": msa_f1,
+        }
+
+        results.append(row)
 
         print()
-        print("All Arabic macro-F1:", all_f1)
-        print("Gulf macro-F1:", gulf_f1)
-        print("MSA macro-F1:", msa_f1)
+        print(
+            "All Arabic macro-F1:",
+            round(all_f1, 4),
+        )
+        print(
+            "Gulf macro-F1:",
+            round(gulf_f1, 4),
+        )
+        print(
+            "MSA macro-F1:",
+            round(msa_f1, 4),
+        )
 
     print()
-    print("=" * 60)
-    print("FINAL BAKE-OFF")
-    print("=" * 60)
+    print("=" * 70)
+    print("FINAL ARABIC MODEL BAKE-OFF")
+    print("=" * 70)
 
     for row in results:
         print(
@@ -228,9 +286,27 @@ def main():
             f'MSA={row["msa_macro_f1"]:.4f}'
         )
 
+    # Day-2 baseline for Lab 4 target.
+    baseline = next(
+        row
+        for row in results
+        if row["model"] == "Day-2 XLM-R"
+    )
+
+    arabic_models = [
+        row
+        for row in results
+        if row["model"] != "Day-2 XLM-R"
+    ]
+
     winner = max(
-        results,
+        arabic_models,
         key=lambda row: row["gulf_macro_f1"],
+    )
+
+    gulf_delta = (
+        winner["gulf_macro_f1"]
+        - baseline["gulf_macro_f1"]
     )
 
     print()
@@ -238,6 +314,30 @@ def main():
         "Winner by Gulf slice:",
         winner["model"],
     )
+
+    print(
+        "Day-2 Gulf macro-F1:",
+        f'{baseline["gulf_macro_f1"]:.4f}',
+    )
+
+    print(
+        "Winner Gulf macro-F1:",
+        f'{winner["gulf_macro_f1"]:.4f}',
+    )
+
+    print(
+        "Gulf macro-F1 delta vs Day-2:",
+        f"{gulf_delta:+.4f}",
+    )
+
+    if gulf_delta >= 0.04:
+        print(
+            "Lab 4 Gulf target: MET"
+        )
+    else:
+        print(
+            "Lab 4 Gulf target: NOT MET"
+        )
 
 
 if __name__ == "__main__":
