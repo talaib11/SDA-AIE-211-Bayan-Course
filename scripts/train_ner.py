@@ -1,11 +1,11 @@
-"""Lab 3B: fine-tune token classification with correct alignment."""
+"""Lab 3B / Lab 4: fine-tune NER with optional segmented CoNLL data."""
 
 import argparse
 from pathlib import Path
 
 import numpy as np
 from datasets import Dataset, DatasetDict
-from seqeval.metrics import f1_score
+from seqeval.metrics import classification_report, f1_score
 from transformers import (
     AutoModelForTokenClassification,
     AutoTokenizer,
@@ -18,16 +18,23 @@ from bayan.models.ner import align_labels
 
 
 CHECKPOINT = "xlm-roberta-base"
-DATA_PATH = "data/models/bayan_ner.conll"
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         "--output-dir",
         default="artifacts/ner",
-        help="Where to save the trained NER artefact (local path or mounted Drive path).",
+        help="Where to save the trained NER artefact.",
     )
+
+    parser.add_argument(
+        "--data-path",
+        default="data/models/bayan_ner.conll",
+        help="Path to the CoNLL NER dataset.",
+    )
+
     return parser.parse_args()
 
 
@@ -67,8 +74,10 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Read the supplied Lab 3B CoNLL dataset.
-    sentences, tag_sequences = read_conll(DATA_PATH)
+    print("NER data:", args.data_path)
+
+    # Read either the original or segmented CoNLL dataset.
+    sentences, tag_sequences = read_conll(args.data_path)
 
     # Build BIO label mappings.
     tag_names = sorted(
@@ -216,11 +225,26 @@ def main():
                 gold_tags
             )
 
+        entity_f1 = f1_score(
+            true_labels,
+            true_predictions,
+        )
+
+        report = classification_report(
+            true_labels,
+            true_predictions,
+            output_dict=True,
+            zero_division=0,
+        )
+
+        location_recall = (
+            report.get("LOCATION", {})
+            .get("recall", 0.0)
+        )
+
         return {
-            "entity_f1": f1_score(
-                true_labels,
-                true_predictions,
-            )
+            "entity_f1": entity_f1,
+            "location_recall": location_recall,
         }
 
     training_args = TrainingArguments(
@@ -254,23 +278,34 @@ def main():
         tokenized["validation"]
     )
 
+    print()
     print(
         "Validation entity-F1:",
         validation_metrics["eval_entity_f1"],
+    )
+    print(
+        "Validation LOCATION recall:",
+        validation_metrics["eval_location_recall"],
     )
 
     test_metrics = trainer.evaluate(
         tokenized["test"]
     )
 
+    print()
     print(
         "Frozen test entity-F1:",
         test_metrics["eval_entity_f1"],
+    )
+    print(
+        "Frozen test LOCATION recall:",
+        test_metrics["eval_location_recall"],
     )
 
     trainer.save_model(str(output_dir))
     tokenizer.save_pretrained(str(output_dir))
 
+    print()
     print(
         "Saved NER model to:",
         output_dir,
