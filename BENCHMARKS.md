@@ -31,7 +31,17 @@
 | `[PAD]` mass with mask | 0.0 (0%) |
 | Pad-attention leakage fix | Verified (`True`) |
 ## Lab 3A — Classification
+| Model | Validation macro-F1 | Frozen test macro-F1 |
+|---|---:|---:|
+| TF-IDF + LinearSVC | 1.0000 | 1.0000 |
+| XLM-R topic classifier | 1.0000 | 1.0000 |
 
+- Grouped split integrity test: 1 / 1 passed
+- Fine-tuning checkpoint: `xlm-roberta-base`
+- Training epochs: 3
+- Learning rate: `2e-5`
+- Seed: 42
+- Classifier artifact: `artifacts/topic_classifier`
 ## Lab 3B — NER + QA
 
 ## Lab 4 — Arabic normalization / dialect
