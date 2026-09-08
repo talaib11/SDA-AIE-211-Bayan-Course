@@ -51,6 +51,18 @@
 - The supplied `qa_smoke_set.json` does not contain the 3 unanswerable cases stated in the Lab 3B README.
 ## Lab 4 — Arabic normalization / dialect
 
+| Check | Result |
+|---|---|
+| Arabic normalization golden pairs | 30 / 30 passed |
+| Arabic slice size | 7,200 |
+| Gulf | 4,800 (66.7%) |
+| MSA | 2,400 (33.3%) |
+| Original NER LOCATION recall | 1.0000 |
+| Segmented NER LOCATION recall | 1.0000 |
+| LOCATION recall delta | +0.0000 |
+
+- The original Day-2 NER already achieved 100% LOCATION recall on this split, so segmentation could not improve recall further.
+
 ## Lab 5 — Semantic search
 
 ## Lab 6 — Evaluation / model cards
