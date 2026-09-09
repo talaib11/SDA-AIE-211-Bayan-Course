@@ -1,12 +1,3 @@
-Bayan Project — Steps Completed
-Project Setup
-Connected the project to the provided GitHub repository.
-Cloned the repository and worked on the same shared codebase throughout the labs.
-Set up the Python environment and installed the required dependencies.
-Used Git to track changes and push completed work to the repository.
-Used Google Colab when GPU resources were required for model training.
-
-The course specifically requires keeping the same repository throughout the labs because each lab builds on previous components and evidence.
 
 Lab 1 — Bilingual Preprocessing and Tokenization
 Inspected the raw Arabic and English data and identified common text defects.
