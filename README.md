@@ -70,3 +70,14 @@ Overall workflow:
 Repository Setup → Preprocessing → Transformer Attention → Classification/NER/QA → Arabic Optimization → Semantic Search → Evaluation → Inference Optimization
 
 That follows the intended Bayan progression from raw bilingual text toward a complete NLP service.
+### Developed By
+
+**Tala Alshowiman**
+
+### Program
+
+**SDAIA Academy**
+
+### SDAIA Academy GitHub
+
+https://github.com/SDAIAAcademy
