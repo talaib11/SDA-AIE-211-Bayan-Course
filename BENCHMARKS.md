@@ -101,7 +101,28 @@
 - Planted-bug lesson: retrieval quality must be approved using the labelled query set and measured metrics rather than by visually inspecting plausible results.
 
 ## Lab 6 — Evaluation / model cards
+| Check | Result |
+|---|---:|
+| Validation examples | 2,400 |
+| Overall accuracy | 0.8750 |
+| 95% bootstrap CI | [0.8617, 0.8888] |
+| Validation errors | 300 |
+| Arabic accuracy | 0.7500 |
+| English accuracy | 1.0000 |
+| MSA accuracy | 0.7500 |
+| Parks accuracy | 0.0000 |
+| Invariance behavioural tests | 8 / 8 = 100% |
+| Directional behavioural tests | 5 / 5 = 100% |
+| MFT behavioural tests | 8 / 8 = 100% |
+| Manually reviewed errors | 120 |
+| Class-overlap / semantic ambiguity | 116 / 120 = 96.7% |
+| Code-switching | 4 / 120 = 3.3% |
+| Model cards generated | 3 |
 
+- Invariance target (>=95%): MET
+- MFT target (>=90%): MET
+- Main observed weakness: parks class accuracy = 0.0000.
+- Primary reviewed error category: class-overlap / semantic ambiguity.
 ## Lab 7 — ONNX / INT8 + FastAPI
 
 ## Capstone
