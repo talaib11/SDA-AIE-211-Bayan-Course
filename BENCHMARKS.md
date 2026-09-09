@@ -123,6 +123,30 @@
 - MFT target (>=90%): MET
 - Main observed weakness: parks class accuracy = 0.0000.
 - Primary reviewed error category: class-overlap / semantic ambiguity.
-## Lab 7 — ONNX / INT8 + FastAPI
+## Lab 7 — Part 1: CPU Inference Benchmark
 
+### Benchmark configuration
+
+- Device: CPU
+- OMP_NUM_THREADS: 4
+- Production length mix: `data/serving/bench_mix.npy`
+- Production mix examples: 2000
+- Warm-up iterations are excluded from latency measurements.
+- Latency is reported using p50 and p99.
+- Dynamic padding is evaluated with `max_length=128`.
+
+### Measured results
+
+| Configuration | p50 (ms) | p99 (ms) |
+|---|---:|---:|
+| PyTorch FP32, dynamic padding, max_length=128 | 198.36 | 359.99 |
+
+For the fixed `max_length=512` configuration, CPU inference was prohibitively slow in the available runtime. Three repeated single-inference measurements were:
+
+- Run 1: 12815.34 ms
+- Run 2: 12870.50 ms
+- Run 3: 12811.06 ms
+- Median: 12815.34 ms
+
+The dynamic-padding configuration therefore provides a substantial latency reduction compared with fixed 512-token padding in the measured CPU environment.
 ## Capstone
